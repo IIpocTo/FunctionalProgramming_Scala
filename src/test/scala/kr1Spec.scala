@@ -13,6 +13,10 @@ class kr1Spec extends FlatSpec{
         assertResult(List(1, 2, 3, 5)) { mutable_set(testList) }
     }
 
+    "Immutable set function" should "return no duplicate elements" in {
+        assertResult(List(1, 2, 3, 5)) { immutable_set(testList) }
+    }
+
     "Freq function" should "return list of pairs (element, frequency)" in {
         assertResult(List(
             (1, testList.count(_ == 1)),

@@ -21,6 +21,12 @@ object kr1 extends App {
         mutableList.toList
     }
 
+    /*Или же через рекурсию, но с сохранением immutable state*/
+    def immutable_set(list: List[Any]): List[Any] = list match {
+        case x :: xs => x :: immutable_set(xs.filter(y => y != x))
+        case Nil => list
+    }
+
     /*freq — функция, возвращающая список пар (символ, частота).
     Каждая пара определяет атом из заданного списка и частоту его вхождения в этот список.*/
     def freq(list: List[Any]): List[(Any, Int)] = {
