@@ -1,12 +1,16 @@
 import org.scalatest.FlatSpec
-import kr1.{set, freq}
+import kr1._
 
 class kr1Spec extends FlatSpec{
 
     val testList: List[Int] = List(1, 1, 1, 2, 2, 1, 2, 2, 3, 1, 2, 3, 3, 5, 3, 2, 1, 3)
 
-    "Sum function" should "return no duplicate elements" in {
+    "Set function" should "return no duplicate elements" in {
         assertResult(List(1, 2, 3, 5)) { set(testList) }
+    }
+
+    "Mutable set function" should "return no duplicate elements" in {
+        assertResult(List(1, 2, 3, 5)) { mutable_set(testList) }
     }
 
     "Freq function" should "return list of pairs (element, frequency)" in {

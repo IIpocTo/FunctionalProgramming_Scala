@@ -11,6 +11,16 @@ object kr1 extends App {
         list.distinct
     }
 
+    /*Eсли не пользоваться предопределённой функцией и преобразованием в Set,
+    то функцию можно реализовать через изменяемый(mutable) список.*/
+    def mutable_set(list: List[Any]): List[Any] = {
+        val mutableList = scala.collection.mutable.ListBuffer.empty[Any]
+        list.foreach(el => {
+            if (!mutableList.contains(el)) mutableList += el
+        })
+        mutableList.toList
+    }
+
     /*freq — функция, возвращающая список пар (символ, частота).
     Каждая пара определяет атом из заданного списка и частоту его вхождения в этот список.*/
     def freq(list: List[Any]): List[(Any, Int)] = {
