@@ -1,7 +1,7 @@
 import org.scalatest.FlatSpec
 import kr1._
 
-class kr1Spec extends FlatSpec{
+class kr1Spec extends FlatSpec {
 
     val testList: List[Int] = List(1, 1, 1, 2, 2, 1, 2, 2, 3, 1, 2, 3, 3, 5, 3, 2, 1, 3)
 
