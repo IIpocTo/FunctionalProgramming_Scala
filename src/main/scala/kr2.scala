@@ -55,7 +55,7 @@ object kr2 extends App {
       *
       * @param n требуемое число пирамидальных чисел.
       * @return Список из первых n пирамидальных чисел.
-      * @example getPyramidalNumbersList(14) = List(0, 1, 5, 15)
+      * @example getPyramidalNumbersList(4) = List(0, 1, 5, 15)
       */
     def getPyramidalNumbersList(n: Int): List[BigInt] = {
         lazy val pyramidalNumbersStream: Stream[BigInt] =
