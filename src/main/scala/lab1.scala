@@ -59,7 +59,7 @@ object lab1 extends App {
     }
 
     case class NewtonMethod(f: Double => Double, df: Double => Double) {
-        def getRoot(initialValue: Double, preciseValue: Double): Result = {
+        def getRoot(initialValue: Double): Result = {
             def nextX(x: Double) = x - f(x) / df(x)
             lazy val newtonStream: Stream[Double] =
                 Stream.cons(initialValue, newtonStream.map(xx => nextX(xx)))
@@ -70,7 +70,7 @@ object lab1 extends App {
     }
 
     for ((f, fd, r, value) <- summaryList) {
-        println("Newton method: " + '\t' + NewtonMethod(f, fd).getRoot((r._1 + r._2) / 2, value))
+        println("Newton method: " + '\t' + NewtonMethod(f, fd).getRoot((r._1 + r._2) / 2))
     }
 
     case class DichotomyMethod() {
