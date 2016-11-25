@@ -3,12 +3,12 @@ import scala.annotation.tailrec
 object lab2 extends App {
 
     abstract class Token
-    case object OpenBrace extends Token
-    case object CloseBrace extends Token
-    case object OpenBracket extends Token
-    case object CloseBracket extends Token
-    case object Colon extends Token
-    case object Comma extends Token
+    case object OpenCurlyBracket extends Token //{
+    case object CloseCurlyBracket extends Token //}
+    case object OpenSquareBracket extends Token //[
+    case object CloseSquareBracket extends Token //]
+    case object Colon extends Token //:
+    case object Comma extends Token //,
     case object NullToken extends Token
     case class StringToken(string: String) extends Token
     case class NumberToken(double: Double) extends Token
@@ -26,38 +26,38 @@ object lab2 extends App {
 
         @tailrec
         def parseString(acc: String, rest: List[Char]): (String, List[Char]) = rest match {
-            case '\\' :: '"' :: xs => parseString(acc + "\"", xs)
-            case '\\' :: 'n' :: xs => parseString(acc + "\n", xs)
-            case '"' :: xs => (acc, xs)
-            case x :: xs => parseString(acc + x.toString, xs)
+            case '\\' :: '"' :: tail => parseString(acc + "\"", tail)
+            case '\\' :: 'n' :: tail => parseString(acc + "\n", tail)
+            case '"' :: tail => (acc, tail)
+            case x :: tail => parseString(acc + x.toString, tail)
             case _ => throw new RuntimeException("Malformed String")
         }
 
         @tailrec
         def parseNumber(acc: String, rest: List[Char]): (String, List[Char]) = rest match {
-            case x :: xs if List(')', ':', ',', ']').contains(x) => (acc, xs)
-            case w :: xs if Character.isWhitespace(w) => (acc, xs)
+            case x :: tail if List(')', ':', ',', ']').contains(x) => (acc, tail)
+            case w :: tail if Character.isWhitespace(w) => (acc, tail)
             case Nil => (acc, Nil)
-            case c :: xs => parseNumber(acc + c.toString, xs)
+            case c :: tail => parseNumber(acc + c.toString, tail)
         }
 
         @tailrec
         def tokenize(acc: List[Token], rest: List[Char]): List[Token] = rest match {
-            case w :: xs if Character.isWhitespace(w) => tokenize(acc, xs)
-            case '{' :: xs => tokenize(acc :+ OpenBrace, xs)
-            case '}' :: xs => tokenize(acc :+ CloseBrace, xs)
-            case '[' :: xs => tokenize(acc :+ OpenBracket, xs)
-            case ']' :: xs => tokenize(acc :+ CloseBracket, xs)
-            case ':' :: xs => tokenize(acc :+ Colon, xs)
-            case ',' :: xs => tokenize(acc :+ Comma, xs)
-            case '"' :: xs =>
-                val (string, rest) = parseString("", xs)
+            case w :: tail if Character.isWhitespace(w) => tokenize(acc, tail)
+            case '{' :: tail => tokenize(acc :+ OpenCurlyBracket, tail)
+            case '}' :: tail => tokenize(acc :+ CloseCurlyBracket, tail)
+            case '[' :: tail => tokenize(acc :+ OpenSquareBracket, tail)
+            case ']' :: tail => tokenize(acc :+ CloseSquareBracket, tail)
+            case ':' :: tail => tokenize(acc :+ Colon, tail)
+            case ',' :: tail => tokenize(acc :+ Comma, tail)
+            case '"' :: tail =>
+                val (string, rest) = parseString("", tail)
                 tokenize(acc :+ StringToken(string), rest)
-            case 'n' :: 'u' :: 'l' :: 'l' :: xs => tokenize(acc :+ NullToken, xs)
-            case 't' :: 'r' :: 'u' :: 'e' :: xs => tokenize(acc :+ BooleanToken(true), xs)
-            case 'f' :: 'a' :: 'l' :: 's' :: 'e' :: xs => tokenize(acc :+ BooleanToken(false), xs)
-            case d :: xs =>
-                val (number, rest) = parseNumber(d.toString, xs)
+            case 'n' :: 'u' :: 'l' :: 'l' :: tail => tokenize(acc :+ NullToken, tail)
+            case 't' :: 'r' :: 'u' :: 'e' :: tail => tokenize(acc :+ BooleanToken(true), tail)
+            case 'f' :: 'a' :: 'l' :: 's' :: 'e' :: tail => tokenize(acc :+ BooleanToken(false), tail)
+            case double :: tail =>
+                val (number, rest) = parseNumber(double.toString, tail)
                 tokenize(acc :+ NumberToken(java.lang.Double.parseDouble(number)), rest)
             case Nil => acc
             case _ => throw new RuntimeException("Tokenizing error")
@@ -102,29 +102,29 @@ object lab2 extends App {
         def parse(tokens: List[Token]): (Json, List[Token]) = {
 
             def parseObject(list: List[(String, Json)], rest: List[Token]): (Json, List[Token]) = rest match {
-                    case CloseBrace :: xs => (JsonObject(list), xs)
-                    case Comma :: xs => parseObject(list, xs)
-                    case StringToken(s) :: Colon :: xs =>
-                        val (json, rest) = parse(xs)
+                    case CloseCurlyBracket :: tail => (JsonObject(list), tail)
+                    case Comma :: tail => parseObject(list, tail)
+                    case StringToken(s) :: Colon :: tail =>
+                        val (json, rest) = parse(tail)
                         parseObject(list :+ (s, json), rest)
                     case _ => throw new RuntimeException("Incorrect object")
                 }
 
             def parseArray(list: List[Json], rest: List[Token]): (Json, List[Token]) = rest match {
-                case CloseBracket :: xs => (JsonArray(list), xs)
-                case Comma :: xs => parseArray(list, xs)
-                case value =>
-                    val (json, rest) = parse(value)
+                case CloseSquareBracket :: tail => (JsonArray(list), tail)
+                case Comma :: tail => parseArray(list, tail)
+                case elem =>
+                    val (json, rest) = parse(elem)
                     parseArray(list :+ json, rest)
             }
 
             tokens match {
-                case OpenBrace :: xs => parseObject(Nil, xs)
-                case OpenBracket :: xs => parseArray(Nil, xs)
-                case NullToken :: xs => (JsonNull, xs)
-                case StringToken(str) :: xs => (JsonString(str), xs)
-                case NumberToken(number) :: xs => (JsonNumber(number), xs)
-                case BooleanToken(bool) :: xs => (JsonBoolean(bool), xs)
+                case OpenCurlyBracket :: tail => parseObject(Nil, tail)
+                case OpenSquareBracket :: tail => parseArray(Nil, tail)
+                case NullToken :: tail => (JsonNull, tail)
+                case StringToken(str) :: tail => (JsonString(str), tail)
+                case NumberToken(number) :: tail => (JsonNumber(number), tail)
+                case BooleanToken(bool) :: tail => (JsonBoolean(bool), tail)
                 case _ => throw new RuntimeException("Invalid token")
             }
 
