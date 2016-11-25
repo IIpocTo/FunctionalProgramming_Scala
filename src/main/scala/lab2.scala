@@ -1,250 +1,80 @@
-import java.io.{Reader, StringReader}
-
-import scala.collection.mutable.ArrayBuffer
+import scala.annotation.tailrec
 
 object lab2 extends App {
 
+    abstract class Token
+    case object OpenBrace extends Token
+    case object CloseBrace extends Token
+    case object OpenBracket extends Token
+    case object CloseBracket extends Token
+    case object Colon extends Token
+    case object Comma extends Token
+    case object NullToken extends Token
+    case class StringToken(string: String) extends Token
+    case class NumberToken(double: Double) extends Token
+    case class BooleanToken(boolean: Boolean) extends Token
+
     abstract class Json
-    case class JsonObject(value: (String, Json)*) extends Json
-    case class JsonArray(value: Json*) extends Json
-    case class JsonString(value: String) extends Json
-    case class JsonNumber(value: Double) extends Json
-    case class JsonBoolean(value: Boolean) extends Json
+    case class JsonObject(value: List[(String, Json)]) extends Json
+    case class JsonArray(value : List[Json]) extends Json
+    case class JsonString(value : String) extends Json
+    case class JsonNumber(value : Double) extends Json
+    case class JsonBoolean(value : Boolean) extends Json
     case object JsonNull extends Json
 
-    case class ParseJsonException(message: String, line: Int, column: Int)
-        extends RuntimeException(s"$message at line $line, column $column")
+    def getTokens(source: String): List[Token] = {
 
-    object Json {
-
-        def read(text: String): Json = {
-            val jsonString: List[List[Char]] = text.split('\n').map(line => line.toList).toList
-            jsonString(1).foreach(println)
-            read(new StringReader(text))
+        @tailrec
+        def parseString(acc: String, rest: List[Char]): (String, List[Char]) = rest match {
+            case '\\' :: '"' :: xs => parseString(acc + "\"", xs)
+            case '\\' :: 'n' :: xs => parseString(acc + "\n", xs)
+            case '"' :: xs => (acc, xs)
+            case x :: xs => parseString(acc + x.toString, xs)
+            case _ => throw new RuntimeException("Malformed String")
         }
 
-        def read(reader: Reader): Json = {
-
-
-            var line = 1
-            var column = 0
-            var current: Int = -1
-
-            def next() = {
-                if (current == '\n') {
-                    line += 1
-                    column = 1
-                } else {
-                    column += 1
-                }
-                current = reader.read()
-                current
-            }
-
-            def skipWhitespace() = {
-                while (Character.isWhitespace(current)) next()
-            }
-
-            next()
-
-            def readObject(): Json = {
-                if (current != '{')
-                    throw ParseJsonException("Expected a '{'", line, column)
-                next()
-                skipWhitespace()
-                val members = ArrayBuffer[(String, Json)]()
-                var first = true
-                while (current != '}') {
-                    if (first) {
-                        first = false
-                    } else {
-                        if (current != ',')
-                            throw ParseJsonException("Expected a ','", line, column)
-                        next()
-                        skipWhitespace()
-                    }
-                    if (current != '"')
-                        throw ParseJsonException("Expected a label", line, column)
-                    val label = readString()
-                    if (current != ':')
-                        throw ParseJsonException("Expected a ':'", line, column)
-                    next()
-                    skipWhitespace()
-                    val value = readJson()
-                    members += (label -> value)
-                }
-                next()
-                skipWhitespace()
-                JsonObject(members: _*)
-            }
-
-            def readArray(): Json = {
-                if (current != '[')
-                    throw ParseJsonException("Expected an array '['", line, column)
-                next()
-                skipWhitespace()
-                val elements = ArrayBuffer[Json]()
-                var first = true
-                while (current != ']') {
-                    if (first) {
-                        first = false
-                    } else {
-                        if (current != ',')
-                            throw ParseJsonException("Expected a ','", line, column)
-                        next()
-                        skipWhitespace()
-                    }
-                    val value = readJson()
-                    elements += value
-                }
-                next()
-                skipWhitespace()
-                JsonArray(elements: _*)
-            }
-
-            def readString(): String = {
-                if (current != '"')
-                    throw ParseJsonException("Expected a string", line, column)
-                next()
-                val builder = new StringBuilder()
-                while (current != '"') {
-                    if (current == -1)
-                        throw ParseJsonException("Unexpected end of file inside a string", line, column)
-                    if (current.toChar.isControl)
-                        throw ParseJsonException("Unescaped control character inside a string", line, column)
-                    if (current == '\\') {
-                        val result = next() match {
-
-                            case -1 => throw ParseJsonException(
-                                "Unexpected end of file inside an escape sequence", line, column
-                            )
-                            case '"' => '"'
-                            case '\\' => '\\'
-                            case '/' => '/'
-                            case 'b' => '\b'
-                            case 'f' => '\f'
-                            case 'n' => '\n'
-                            case 'r' => '\r'
-                            case 't' => '\t'
-                            case 'u' =>
-
-                                val hex1 = next()
-                                val hex2 = next()
-                                val hex3 = next()
-                                val hex4 = next()
-                                try {
-                                    Integer.parseInt(
-                                        "" + hex1.toChar + hex2.toChar + hex3.toChar + hex4.toChar, 16
-                                    ).toChar
-                                } catch {
-                                    case e: NumberFormatException =>
-                                        throw ParseJsonException(e.getMessage, line, column)
-                                }
-
-                            case _ =>
-                                throw ParseJsonException("Unknown escape sequence: \\" + current.toChar, line, column)
-
-                        }
-                        builder.append(result)
-                    } else {
-                        builder.append(current.toChar)
-                    }
-                    next()
-                }
-                next()
-                skipWhitespace()
-                builder.toString()
-            }
-
-            def isNumberPart(c: Int): Boolean = {
-                (c >= '0' && c <= '9') || c == '+' || c == '-' || c == 'e' || c == 'E' || c == '.'
-            }
-
-            def readNumber(): Json = {
-                val builder = new StringBuilder
-                while (isNumberPart(current)) {
-                    builder.append(current.toChar)
-                    next()
-                }
-                skipWhitespace()
-                val text = builder.toString()
-                if (text.startsWith(".") || text.startsWith("-.") || text.startsWith("+"))
-                    throw ParseJsonException(
-                        "A JSON number must have a digit before the . and can't start with a +", line, column
-                    )
-                try {
-                    JsonNumber(java.lang.Double.parseDouble(text))
-                } catch {
-                    case e : NumberFormatException => throw ParseJsonException(e.getMessage, line, column)
-                }
-            }
-
-            def readTrue(): Json = {
-                if (current != 't') throw ParseJsonException("Expected 'true'", line, column)
-                if (next() != 'r') throw ParseJsonException("Expected 'true'", line, column)
-                if (next() != 'u') throw ParseJsonException("Expected 'true'", line, column)
-                if (next() != 'e') throw ParseJsonException("Expected 'true'", line, column)
-                next()
-                skipWhitespace()
-                JsonBoolean(value = true)
-            }
-
-            def readFalse() : Json = {
-                if (current != 'f') throw ParseJsonException("Expected 'false'", line, column)
-                if (next() != 'a') throw ParseJsonException("Expected 'false'", line, column)
-                if (next() != 'l') throw ParseJsonException("Expected 'false'", line, column)
-                if (next() != 's') throw ParseJsonException("Expected 'false'", line, column)
-                if (next() != 'e') throw ParseJsonException("Expected 'false'", line, column)
-                next()
-                skipWhitespace()
-                JsonBoolean(value = false)
-            }
-
-            def readNull() : Json = {
-                if(current != 'n') throw ParseJsonException("Expected 'null'", line, column)
-                if(next() != 'u') throw ParseJsonException("Expected 'null'", line, column)
-                if(next() != 'l') throw ParseJsonException("Expected 'null'", line, column)
-                if(next() != 'l') throw ParseJsonException("Expected 'null'", line, column)
-                next()
-                skipWhitespace()
-                JsonNull
-            }
-
-            def readJson(): Json = {
-                current match {
-                    case '{' => readObject()
-                    case '[' => readArray()
-                    case '"' => JsonString(readString())
-                    case 't' => readTrue()
-                    case 'f' => readFalse()
-                    case 'n' => readNull()
-                    case c if isNumberPart(c) => readNumber()
-                    case -1 => throw ParseJsonException(
-                        "Unexpected end of file", line, column
-                    )
-                    case _ => throw ParseJsonException(
-                        "Unexpected character: " + current.toChar + " (" + current + ")", line, column
-                    )
-                }
-            }
-
-            skipWhitespace()
-            val result = readJson()
-            result
-
+        @tailrec
+        def parseNumber(acc: String, rest: List[Char]): (String, List[Char]) = rest match {
+            case x :: xs if List(')', ':', ',', ']').contains(x) => (acc, xs)
+            case w :: xs if Character.isWhitespace(w) => (acc, xs)
+            case Nil => (acc, Nil)
+            case c :: xs => parseNumber(acc + c.toString, xs)
         }
+
+        @tailrec
+        def tokenize(acc: List[Token], rest: List[Char]): List[Token] = rest match {
+            case w :: xs if Character.isWhitespace(w) => tokenize(acc, xs)
+            case '{' :: xs => tokenize(acc :+ OpenBrace, xs)
+            case '}' :: xs => tokenize(acc :+ CloseBrace, xs)
+            case '[' :: xs => tokenize(acc :+ OpenBracket, xs)
+            case ']' :: xs => tokenize(acc :+ CloseBracket, xs)
+            case ':' :: xs => tokenize(acc :+ Colon, xs)
+            case ',' :: xs => tokenize(acc :+ Comma, xs)
+            case '"' :: xs =>
+                val (string, rest) = parseString("", xs)
+                tokenize(acc :+ StringToken(string), rest)
+            case 'n' :: 'u' :: 'l' :: 'l' :: xs => tokenize(acc :+ NullToken, xs)
+            case 't' :: 'r' :: 'u' :: 'e' :: xs => tokenize(acc :+ BooleanToken(true), xs)
+            case 'f' :: 'a' :: 'l' :: 's' :: 'e' :: xs => tokenize(acc :+ BooleanToken(false), xs)
+            case d :: xs =>
+                val (number, rest) = parseNumber(d.toString, xs)
+                tokenize(acc :+ NumberToken(java.lang.Double.parseDouble(number)), rest)
+            case Nil => acc
+            case _ => throw new RuntimeException("Tokenizing error")
+        }
+
+        tokenize(Nil, source.toList)
 
     }
 
-
-
-    val result = Json.read(
+    private val tokens = getTokens(
         """{
                 "id": "011A",
                 "error": "Expected a ',' or '}' at 15 [character 16 line 1]",
                 "price": "500\u00a3",
                 "validate": false,
                 "time": "03:53:25 AM",
+                "value": 323e-1,
                 "results":[
                     {
                         "text":"@twitterapi  http://tinyurl.com/ctrefg",
@@ -265,7 +95,48 @@ object lab2 extends App {
         }"""
     )
 
-    println(result)
+    println(tokens)
 
+    def parseTokens(tokens: List[Token]): Json = {
+
+        def parse(tokens: List[Token]): (Json, List[Token]) = {
+
+            def parseObject(list: List[(String, Json)], rest: List[Token]): (Json, List[Token]) = rest match {
+                    case CloseBrace :: xs => (JsonObject(list), xs)
+                    case Comma :: xs => parseObject(list, xs)
+                    case StringToken(s) :: Colon :: xs =>
+                        val (json, rest) = parse(xs)
+                        parseObject(list :+ (s, json), rest)
+                    case _ => throw new RuntimeException("Incorrect object")
+                }
+
+            def parseArray(list: List[Json], rest: List[Token]): (Json, List[Token]) = rest match {
+                case CloseBracket :: xs => (JsonArray(list), xs)
+                case Comma :: xs => parseArray(list, xs)
+                case value =>
+                    val (json, rest) = parse(value)
+                    parseArray(list :+ json, rest)
+            }
+
+            tokens match {
+                case OpenBrace :: xs => parseObject(Nil, xs)
+                case OpenBracket :: xs => parseArray(Nil, xs)
+                case NullToken :: xs => (JsonNull, xs)
+                case StringToken(str) :: xs => (JsonString(str), xs)
+                case NumberToken(number) :: xs => (JsonNumber(number), xs)
+                case BooleanToken(bool) :: xs => (JsonBoolean(bool), xs)
+                case _ => throw new RuntimeException("Invalid token")
+            }
+
+        }
+
+        parse(tokens) match {
+            case (result, Nil) => result
+            case _ => throw new RuntimeException("Wrong JSON structure")
+        }
+
+    }
+
+    println(parseTokens(tokens))
 
 }
