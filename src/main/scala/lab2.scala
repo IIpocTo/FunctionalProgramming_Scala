@@ -35,7 +35,7 @@ object lab2 extends App {
 
         @tailrec
         def parseNumber(acc: String, rest: List[Char]): (String, List[Char]) = rest match {
-            case x :: tail if List(')', ':', ',', ']').contains(x) => (acc, tail)
+            case x :: tail if List(',', ']').contains(x) => (acc, tail)
             case w :: tail if Character.isWhitespace(w) => (acc, tail)
             case Nil => (acc, Nil)
             case c :: tail => parseNumber(acc + c.toString, tail)
@@ -66,36 +66,6 @@ object lab2 extends App {
         tokenize(Nil, source.toList)
 
     }
-
-    private val tokens = getTokens(
-        """{
-                "id": "011A",
-                "error": "Expected a ',' or '}' at 15 [character 16 line 1]",
-                "price": "500\u00a3",
-                "validate": false,
-                "time": "03:53:25 AM",
-                "value": 323e-1,
-                "results":[
-                    {
-                        "text":"@twitterapi  http://tinyurl.com/ctrefg",
-                        "to_user_id":396524,
-                        "to_user":"TwitterAPI",
-                        "from_user":"jkoum",
-                        "metadata":
-                        {
-                            "result_type":"popular",
-                            "recent_retweets": 109
-                        },
-                        "iso_language_code":"nl",
-                        "source":"twitter<\\n>",
-                        "profile_image_url":"http://s3.amazonaws.com/twitter_production/profile_images/118412707/2522215727_a5f07da155_b_normal.jpg",
-                        "created_at":"Wed, 08 Apr 2009 19:22:10 +0000"
-                    }
-                ]
-        }"""
-    )
-
-    println(tokens)
 
     def parseTokens(tokens: List[Token]): Json = {
 
@@ -137,6 +107,86 @@ object lab2 extends App {
 
     }
 
-    println(parseTokens(tokens))
+    private val tokens = getTokens(
+        """{
+                "id": "011A",
+                "error": "Expected a ',' or '}' at 15 [character 16 line 1]",
+                "price": "500\u00a3",
+                "validate": false,
+                "time": "03:53:25 AM",
+                "value": 323e-1,
+                "results":[
+                    {
+                        "text":"@twitterapi  http://tinyurl.com/ctrefg",
+                        "to_user_id":396524,
+                        "to_user":"TwitterAPI",
+                        "from_user":"jkoum",
+                        "metadata":
+                        {
+                            "result_type":"popular",
+                            "recent_retweets": 109
+                        },
+                        "iso_language_code":"nl",
+                        "source":"twitter<\\n>",
+                        "profile_image_url":"http://s3.amazonaws.com/twitter_production/profile_images/118412707/2522215727_a5f07da155_b_normal.jpg",
+                        "created_at":"Wed, 08 Apr 2009 19:22:10 +0000"
+                    }
+                ]
+        }"""
+    )
+
+    println(s"Tokens\n\n $tokens \n\n\n")
+
+    val testJson: Json = parseTokens(tokens)
+    println(s"JSON\n\n $testJson \n\n\n")
+
+    def calculateHash(json: Json): Map[String, Int] = {
+
+        val emptyHash: Map[String, Int] = Map(
+            "JsonObject" -> 1,
+            "JsonArray" -> 0,
+            "JsonString" -> 0,
+            "JsonNumber" -> 0,
+            "JsonBoolean" -> 0,
+            "JsonNull" -> 0
+        )
+
+        val innerList = json.asInstanceOf[JsonObject].value
+
+        def updateValue(json: String, hash: Map[String, Int]): Map[String, Int] = {
+            val oldValue = hash(json)
+            val hashAfterDelete = hash - json
+            val hashAfterUpdate = hashAfterDelete + (json -> (oldValue + 1))
+            hashAfterUpdate
+        }
+
+        def getHash(list: List[(String, Json)], hash: Map[String, Int]): Map[String, Int]  = list match {
+            case (_, JsonObject(obj)) :: tail => getHash(tail, getHash(obj, updateValue("JsonObject", hash)))
+            case (_, JsonArray(arr)) :: tail => getHash(tail, getHashFromArray(arr, updateValue("JsonArray", hash)))
+            case (_, JsonString(_)) :: tail => getHash(tail, updateValue("JsonString", hash))
+            case (_, JsonBoolean(_)) :: tail => getHash(tail, updateValue("JsonBoolean", hash))
+            case (_, JsonNumber(_)) :: tail => getHash(tail, updateValue("JsonNumber", hash))
+            case (_, JsonNull) :: tail => getHash(tail, updateValue("JsonNull", hash))
+            case Nil => hash
+            case _ => throw new RuntimeException("Invalid json structure")
+        }
+
+        def getHashFromArray(list: List[Json], hash: Map[String, Int]): Map[String, Int] = list match {
+            case JsonObject(obj) :: tail => getHashFromArray(tail, getHash(obj, updateValue("JsonObject", hash)))
+            case JsonArray(arr) :: tail => getHashFromArray(tail, getHashFromArray(arr, updateValue("JsonArray", hash)))
+            case JsonString(_) :: tail => getHashFromArray(tail, updateValue("JsonString", hash))
+            case JsonBoolean(_) :: tail => getHashFromArray(tail, updateValue("JsonBoolean", hash))
+            case JsonNumber(_) :: tail => getHashFromArray(tail, updateValue("JsonNumber", hash))
+            case JsonNull :: tail => getHashFromArray(tail, updateValue("JsonNull", hash))
+            case Nil => hash
+            case _ => throw new RuntimeException("Invalid json structure")
+        }
+
+        getHash(innerList, emptyHash)
+
+    }
+
+    private val jsonHash = calculateHash(testJson)
+    println(s"Hash \n\n $jsonHash \n\n\n")
 
 }
