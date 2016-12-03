@@ -257,6 +257,36 @@ object lab2 extends App {
         buildObject(Nil)
     }
 
-    println(generateRandomJsonObject(5))
+    val randomJsonObject = generateRandomJsonObject(5)
+    println(s"Random JSON\n\n" + randomJsonObject + "\n\n\n")
+
+
+    def getOffset(n: Int): String = {
+        if (n == 0) ""
+        else (for (_ <- 1 to n) yield "    ").reduceLeft(_ ++ _)
+    }
+
+    def serialize(level: Int, json: Json): String = {
+        val currentLevelOffset: String = getOffset(level)
+        val nextLevelOffset: String = getOffset(level + 1)
+        json match {
+            case JsonNull => "null"
+            case JsonBoolean(x) => x.toString
+            case JsonNumber(x) => x.toString
+            case JsonString(x) => "\"" + x.replaceAll("\\n", "\\\\n") + "\""
+            case JsonArray(arr) =>
+                "[\n" + arr
+                    .map(value => nextLevelOffset + serialize(level + 1, value)).reduceLeft(_ + ",\n" + _) +
+                "\n" + currentLevelOffset + "]"
+            case JsonObject(obj) =>
+                "{\n" + obj
+                    .map(tuple => nextLevelOffset + "\"" + tuple._1 + "\": " + serialize(level + 1, tuple._2))
+                    .reduceLeft(_ + ",\n" + _) +
+                "\n" + currentLevelOffset + "}"
+        }
+    }
+
+    val json = serialize(0, testJson)
+    println(s"JSON\n\n" + json)
 
 }
