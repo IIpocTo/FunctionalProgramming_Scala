@@ -29,6 +29,7 @@ object lab2 extends App {
         def parseString(acc: String, rest: List[Char]): (String, List[Char]) = rest match {
             case '\\' :: '"' :: tail => parseString(acc + "\"", tail)
             case '\\' :: 'n' :: tail => parseString(acc + "\n", tail)
+            case '\\' :: '\\' :: 'n' :: tail => parseString(acc + "\\n", tail)
             case '"' :: tail => (acc, tail)
             case x :: tail => parseString(acc + x.toString, tail)
             case _ => throw new RuntimeException("Malformed String")
@@ -40,6 +41,7 @@ object lab2 extends App {
             case w :: tail if Character.isWhitespace(w) => (acc, tail)
             case Nil => (acc, Nil)
             case c :: tail => parseNumber(acc + c.toString, tail)
+            case _ => throw new RuntimeException("Malformed Number")
         }
 
         @tailrec
@@ -128,7 +130,7 @@ object lab2 extends App {
                             "recent_retweets": 109
                         },
                         "iso_language_code":"nl",
-                        "source":"twitter<\\n>",
+                        "source":"twitter<\"\n>",
                         "profile_image_url":"http://s3.amazonaws.com/twitter_production/profile_images/118412707/2522215727_a5f07da155_b_normal.jpg",
                         "created_at":"Wed, 08 Apr 2009 19:22:10 +0000"
                     }
