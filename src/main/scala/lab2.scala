@@ -1,4 +1,5 @@
 import scala.annotation.tailrec
+import scala.util.Random
 
 object lab2 extends App {
 
@@ -186,7 +187,74 @@ object lab2 extends App {
 
     }
 
-    private val jsonHash = calculateHash(testJson)
+    val jsonHash = calculateHash(testJson)
     println(s"Hash \n\n $jsonHash \n\n\n")
+
+    def generateRandomJsonString(length: Int): JsonString = {
+        val randomChar = Random.alphanumeric
+        JsonString(randomChar take length mkString "")
+    }
+
+    def generateRandomString(length: Int): String = {
+        val randomChar = Random.alphanumeric
+        new String(randomChar take length mkString "")
+    }
+
+    def generateRandomJsonNumber(min: Int, max: Int, scale: Int): JsonNumber = {
+        val randomDouble = (min + (max - min)) * Random.nextDouble()
+        JsonNumber(BigDecimal(randomDouble).setScale(scale, BigDecimal.RoundingMode.CEILING).toDouble)
+    }
+
+    def generateRandomJsonArray(length: Int): JsonArray = {
+        @tailrec
+        def buildArray(jsonArray: List[Json]): JsonArray = {
+            if (jsonArray.length == length) JsonArray(jsonArray)
+            else {
+                val randomValue = Random.nextInt(6)
+                randomValue match {
+                    case 0 => buildArray(jsonArray :+ JsonNull)
+                    case 1 => buildArray(jsonArray :+ JsonBoolean(Random.nextBoolean))
+                    case 2 => buildArray(jsonArray :+ generateRandomJsonString(Random.nextInt(20) + 1))
+                    case 3 => buildArray(jsonArray :+ generateRandomJsonNumber(
+                        -Random.nextInt(9999), Random.nextInt(9999), Random.nextInt(10)
+                    ))
+                    case 4 => buildArray(jsonArray :+ generateRandomJsonArray(Random.nextInt(5)))
+                    case 5 => buildArray(jsonArray :+ generateRandomJsonObject(Random.nextInt(5)))
+                    case _ => throw new RuntimeException("sth went wrong")
+                }
+            }
+        }
+        buildArray(Nil)
+    }
+
+    def generateRandomJsonObject(length: Int): JsonObject = {
+        @tailrec
+        def buildObject(jsonObject: List[(String, Json)]): JsonObject = {
+            if (jsonObject.length == length) JsonObject(jsonObject)
+            else {
+                val randomValue = Random.nextInt(6)
+                randomValue match {
+                    case 0 => buildObject(jsonObject :+
+                        (generateRandomString(Random.nextInt(20) + 1), JsonNull))
+                    case 1 => buildObject(jsonObject :+
+                        (generateRandomString(Random.nextInt(20) + 1), JsonBoolean(Random.nextBoolean)))
+                    case 2 => buildObject(jsonObject :+
+                        (generateRandomString(Random.nextInt(20) + 1), generateRandomJsonString(Random.nextInt(50))))
+                    case 3 => buildObject(jsonObject :+
+                        (generateRandomString(Random.nextInt(20) + 1), generateRandomJsonNumber(
+                            -Random.nextInt(9999), Random.nextInt(9999), Random.nextInt(10)
+                        )))
+                    case 4 => buildObject(jsonObject :+
+                        (generateRandomString(Random.nextInt(20) + 1), generateRandomJsonArray(Random.nextInt(5))))
+                    case 5 => buildObject(jsonObject :+
+                        (generateRandomString(Random.nextInt(20) + 1), generateRandomJsonObject(Random.nextInt(5))))
+                    case _ => throw new RuntimeException("sth went wrong")
+                }
+            }
+        }
+        buildObject(Nil)
+    }
+
+    println(generateRandomJsonObject(5))
 
 }
