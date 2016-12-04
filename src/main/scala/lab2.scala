@@ -110,39 +110,6 @@ object lab2 extends App {
 
     }
 
-    private val tokens = getTokens(
-        """{
-                "id": "011A",
-                "error": "Expected a ',' or '}' at 15 [character 16 line 1]",
-                "price": "500\u00a3",
-                "validate": false,
-                "time": "03:53:25 AM",
-                "value": 323e-1,
-                "results":[
-                    {
-                        "text":"@twitterapi  http://tinyurl.com/ctrefg",
-                        "to_user_id":396524,
-                        "to_user":"TwitterAPI",
-                        "from_user":"jkoum",
-                        "metadata":
-                        {
-                            "result_type":"popular",
-                            "recent_retweets": 109
-                        },
-                        "iso_language_code":"nl",
-                        "source":"twitter<\"\n>",
-                        "profile_image_url":"http://s3.amazonaws.com/twitter_production/profile_images/118412707/2522215727_a5f07da155_b_normal.jpg",
-                        "created_at":"Wed, 08 Apr 2009 19:22:10 +0000"
-                    }
-                ]
-        }"""
-    )
-
-    println(s"Tokens\n\n $tokens \n\n\n")
-
-    val testJson: Json = parseTokens(tokens)
-    println(s"JSON\n\n $testJson \n\n\n")
-
     def calculateHash(json: Json): Map[String, Int] = {
 
         val emptyHash: Map[String, Int] = Map(
@@ -188,9 +155,6 @@ object lab2 extends App {
         getHash(innerList, emptyHash)
 
     }
-
-    val jsonHash = calculateHash(testJson)
-    println(s"Hash \n\n $jsonHash \n\n\n")
 
     def generateRandomJsonString(length: Int): JsonString = {
         val randomChar = Random.alphanumeric
@@ -257,36 +221,79 @@ object lab2 extends App {
         buildObject(Nil)
     }
 
-    val randomJsonObject = generateRandomJsonObject(5)
-    println(s"Random JSON\n\n" + randomJsonObject + "\n\n\n")
-
-
     def getOffset(n: Int): String = {
         if (n == 0) ""
         else (for (_ <- 1 to n) yield "\t").reduceLeft(_ ++ _)
     }
 
-    def serialize(level: Int, json: Json): String = {
-        val currentLevelOffset: String = getOffset(level)
-        val nextLevelOffset: String = getOffset(level + 1)
-        json match {
-            case JsonNull => "null"
-            case JsonBoolean(x) => x.toString
-            case JsonNumber(x) => x.toString
-            case JsonString(x) => "\"" + x.replaceAll("\\n", "\\\\n") + "\""
-            case JsonArray(arr) =>
-                "[\n" + arr
-                    .map(value => nextLevelOffset + serialize(level + 1, value)).reduceLeft(_ + ",\n" + _) +
-                "\n" + currentLevelOffset + "]"
-            case JsonObject(obj) =>
-                "{\n" + obj
-                    .map(tuple => nextLevelOffset + "\"" + tuple._1 + "\": " + serialize(level + 1, tuple._2))
-                    .reduceLeft(_ + ",\n" + _) +
-                "\n" + currentLevelOffset + "}"
+    def serialize(json: Json): String = {
+        def byDepths(depth: Int, json: Json): String = {
+            val currentDepthOffset: String = getOffset(depth)
+            val nextDepthOffset: String = getOffset(depth + 1)
+            json match {
+                case JsonNull => "null"
+                case JsonBoolean(x) => x.toString
+                case JsonNumber(x) => x.toString
+                case JsonString(x) => "\"" + x.replaceAll("\\n", "\\\\n") + "\""
+                case JsonArray(arr) =>
+                    "[\n" + arr
+                        .map(value => nextDepthOffset + byDepths(depth + 1, value)).reduceLeft(_ + ",\n" + _) +
+                        "\n" + currentDepthOffset + "]"
+                case JsonObject(obj) =>
+                    "{\n" + obj
+                        .map(tuple => nextDepthOffset + "\"" + tuple._1 + "\": " + byDepths(depth + 1, tuple._2))
+                        .reduceLeft(_ + ",\n" + _) +
+                        "\n" + currentDepthOffset + "}"
+            }
         }
+        byDepths(0, json)
     }
 
-    val json = serialize(0, testJson)
-    println(s"JSON\n\n" + json)
+    def runTestParsing(): Unit = {
+        val inputJson: String =
+            """{
+                "id": "011A",
+                "error": "Expected a ',' or '}' at 15 [character 16 line 1]",
+                "price": "500\u00a3",
+                "validate": false,
+                "time": "03:53:25 AM",
+                "value": 323e-1,
+                "results":[
+                    {
+                        "text":"@twitterapi  http://tinyurl.com/ctrefg",
+                        "to_user_id":396524,
+                        "to_user":"TwitterAPI",
+                        "from_user":"jkoum",
+                        "metadata":
+                        {
+                            "result_type":"popular",
+                            "recent_retweets": 109
+                        },
+                        "iso_language_code":"nl",
+                        "source":"twitter<\"\n>",
+                        "profile_image_url":"http://s3.amazonaws.com/twitter_production/profile_images/118412707/2522215727_a5f07da155_b_normal.jpg",
+                        "created_at":"Wed, 08 Apr 2009 19:22:10 +0000"
+                    }
+                ]
+        }"""
+
+        val tokens = getTokens(inputJson)
+        println(s"Tokens\n\n$tokens\n\n\n")
+
+        val parsedJson: Json = parseTokens(tokens)
+        println(s"JSON Object\n\n$parsedJson\n\n\n")
+
+        val jsonHash = calculateHash(parsedJson)
+        println(s"Hash \n\n$jsonHash\n\n\n")
+
+        val randomJsonObject = generateRandomJsonObject(5)
+        println(s"Random JSON Object\n\n$randomJsonObject\n\n\n")
+
+        val json = serialize(parsedJson)
+        println(s"Serialized JSON\n\n$json")
+        
+    }
+
+    runTestParsing()
 
 }
