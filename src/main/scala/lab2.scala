@@ -74,6 +74,7 @@ object lab2 extends App {
 
         def parse(tokens: List[Token]): (Json, List[Token]) = {
 
+            @tailrec
             def parseObject(list: List[(String, Json)], rest: List[Token]): (Json, List[Token]) = rest match {
                     case CloseCurlyBracket :: tail => (JsonObject(list), tail)
                     case Comma :: tail => parseObject(list, tail)
@@ -83,6 +84,7 @@ object lab2 extends App {
                     case _ => throw new RuntimeException("Incorrect object")
                 }
 
+            @tailrec
             def parseArray(list: List[Json], rest: List[Token]): (Json, List[Token]) = rest match {
                 case CloseSquareBracket :: tail => (JsonArray(list), tail)
                 case Comma :: tail => parseArray(list, tail)
@@ -172,6 +174,7 @@ object lab2 extends App {
     }
 
     def generateRandomJsonArray(length: Int): JsonArray = {
+
         @tailrec
         def buildArray(jsonArray: List[Json]): JsonArray = {
             if (jsonArray.length == length) JsonArray(jsonArray)
@@ -182,7 +185,7 @@ object lab2 extends App {
                     case 1 => buildArray(jsonArray :+ JsonBoolean(Random.nextBoolean))
                     case 2 => buildArray(jsonArray :+ generateRandomJsonString(Random.nextInt(20) + 1))
                     case 3 => buildArray(jsonArray :+ generateRandomJsonNumber(
-                        -Random.nextInt(9999), Random.nextInt(9999), Random.nextInt(10)
+                        -Random.nextInt(999999), Random.nextInt(999999), Random.nextInt(10)
                     ))
                     case 4 => buildArray(jsonArray :+ generateRandomJsonArray(Random.nextInt(5) + 1))
                     case 5 => buildArray(jsonArray :+ generateRandomJsonObject(Random.nextInt(5) + 1))
@@ -190,10 +193,13 @@ object lab2 extends App {
                 }
             }
         }
+
         buildArray(Nil)
+
     }
 
     def generateRandomJsonObject(length: Int): JsonObject = {
+
         @tailrec
         def buildObject(jsonObject: List[(String, Json)]): JsonObject = {
             if (jsonObject.length == length) JsonObject(jsonObject)
@@ -218,7 +224,9 @@ object lab2 extends App {
                 }
             }
         }
+
         buildObject(Nil)
+
     }
 
     def getOffset(n: Int): String = {
@@ -227,6 +235,7 @@ object lab2 extends App {
     }
 
     def serialize(json: Json): String = {
+
         def byDepths(depth: Int, json: Json): String = {
             val currentDepthOffset: String = getOffset(depth)
             val nextDepthOffset: String = getOffset(depth + 1)
@@ -246,10 +255,13 @@ object lab2 extends App {
                         "\n" + currentDepthOffset + "}"
             }
         }
+
         byDepths(0, json)
+
     }
 
     def runTestParsing(): Unit = {
+
         val inputJson: String =
             """{
                 "id": "011A",
@@ -280,18 +292,21 @@ object lab2 extends App {
         val tokens = getTokens(inputJson)
         println(s"Tokens\n\n$tokens\n\n\n")
 
-        val parsedJson: Json = parseTokens(tokens)
-        println(s"JSON Object\n\n$parsedJson\n\n\n")
+        val parsedJsonObject: Json = parseTokens(tokens)
+        println(s"JSON Object\n\n$parsedJsonObject\n\n\n")
 
-        val jsonHash = calculateHash(parsedJson)
+        val jsonHash = calculateHash(parsedJsonObject)
         println(s"Hash \n\n$jsonHash\n\n\n")
 
         val randomJsonObject = generateRandomJsonObject(5)
         println(s"Random JSON Object\n\n$randomJsonObject\n\n\n")
 
-        val json = serialize(parsedJson)
-        println(s"Serialized JSON\n\n$json")
-        
+        val serializedJson = serialize(parsedJsonObject)
+        println(s"Serialized JSON\n\n$serializedJson\n\n\n")
+
+        val serializedRandomJson = serialize(randomJsonObject)
+        println(s"Serialized Random JSON\n\n$serializedRandomJson")
+
     }
 
     runTestParsing()
