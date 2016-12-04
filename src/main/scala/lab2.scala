@@ -30,6 +30,8 @@ object lab2 extends App {
             case '\\' :: '"' :: tail => parseString(acc + "\"", tail)
             case '\\' :: 'n' :: tail => parseString(acc + "\n", tail)
             case '\\' :: '\\' :: 'n' :: tail => parseString(acc + "\\n", tail)
+            case '\\' :: 't' :: tail => parseString(acc + "\t", tail)
+            case '\\' :: '\\' :: 't' :: tail => parseString(acc + "\\t", tail)
             case '"' :: tail => (acc, tail)
             case x :: tail => parseString(acc + x.toString, tail)
             case _ => throw new RuntimeException("Malformed String")
@@ -270,7 +272,7 @@ object lab2 extends App {
                 "validate": false,
                 "time": "03:53:25 AM",
                 "value": 323e-1,
-                "results":[
+                "results": [
                     {
                         "text":"@twitterapi  http://tinyurl.com/ctrefg",
                         "to_user_id":396524,
