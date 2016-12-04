@@ -220,8 +220,8 @@ object lab2 extends App {
                     case 3 => buildArray(jsonArray :+ generateRandomJsonNumber(
                         -Random.nextInt(9999), Random.nextInt(9999), Random.nextInt(10)
                     ))
-                    case 4 => buildArray(jsonArray :+ generateRandomJsonArray(Random.nextInt(5)))
-                    case 5 => buildArray(jsonArray :+ generateRandomJsonObject(Random.nextInt(5)))
+                    case 4 => buildArray(jsonArray :+ generateRandomJsonArray(Random.nextInt(5) + 1))
+                    case 5 => buildArray(jsonArray :+ generateRandomJsonObject(Random.nextInt(5) + 1))
                     case _ => throw new RuntimeException("sth went wrong")
                 }
             }
@@ -241,15 +241,15 @@ object lab2 extends App {
                     case 1 => buildObject(jsonObject :+
                         (generateRandomString(Random.nextInt(20) + 1), JsonBoolean(Random.nextBoolean)))
                     case 2 => buildObject(jsonObject :+
-                        (generateRandomString(Random.nextInt(20) + 1), generateRandomJsonString(Random.nextInt(50))))
+                        (generateRandomString(Random.nextInt(20) + 1), generateRandomJsonString(Random.nextInt(50) + 1)))
                     case 3 => buildObject(jsonObject :+
                         (generateRandomString(Random.nextInt(20) + 1), generateRandomJsonNumber(
                             -Random.nextInt(9999), Random.nextInt(9999), Random.nextInt(10)
                         )))
                     case 4 => buildObject(jsonObject :+
-                        (generateRandomString(Random.nextInt(20) + 1), generateRandomJsonArray(Random.nextInt(5))))
+                        (generateRandomString(Random.nextInt(20) + 1), generateRandomJsonArray(Random.nextInt(5) + 1)))
                     case 5 => buildObject(jsonObject :+
-                        (generateRandomString(Random.nextInt(20) + 1), generateRandomJsonObject(Random.nextInt(5))))
+                        (generateRandomString(Random.nextInt(20) + 1), generateRandomJsonObject(Random.nextInt(5) + 1)))
                     case _ => throw new RuntimeException("sth went wrong")
                 }
             }
@@ -263,7 +263,7 @@ object lab2 extends App {
 
     def getOffset(n: Int): String = {
         if (n == 0) ""
-        else (for (_ <- 1 to n) yield "    ").reduceLeft(_ ++ _)
+        else (for (_ <- 1 to n) yield "\t").reduceLeft(_ ++ _)
     }
 
     def serialize(level: Int, json: Json): String = {
