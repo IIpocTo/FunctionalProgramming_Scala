@@ -1,4 +1,13 @@
+import java.nio.file.Paths
+
+import com.stackmob.newman.ApacheHttpClient
+import com.stackmob.newman.dsl.{POST, http, url}
+import com.stackmob.newman.response.HttpResponse
+
 import scala.annotation.tailrec
+import scala.concurrent.Await
+import scala.concurrent.duration._
+import scala.io.Source
 import scala.util.Random
 
 object lab2 extends App {
@@ -312,5 +321,26 @@ object lab2 extends App {
     }
 
     runTestParsing()
+
+
+    def generateStringFromFile(relativeFilePath: String): String = {
+        val currentDirectory: String = Paths.get("").toAbsolutePath.toString
+        val source = Source.fromFile(currentDirectory + relativeFilePath)
+        val content = try source.mkString finally source.close()
+        content
+    }
+
+    val labCodeString = generateStringFromFile("\\src\\main\\scala\\lab2.scala")
+    val testCodeString = generateStringFromFile("\\src\\test\\scala\\lab2Spec.scala")
+    val code = labCodeString + testCodeString
+
+    implicit val httpClient = new ApacheHttpClient
+    val email = "allxf95@gmail.com"
+
+    val response: HttpResponse = Await.result(POST(url(http, "91.239.142.110", 13666) / "lab2")
+        .setHeaders("Content-Type" -> "application/x-www-form-urlencoded")
+        .setBody(s"email=$email&content=$code")
+        .apply, 2.seconds)
+    println(response.bodyString)
 
 }
